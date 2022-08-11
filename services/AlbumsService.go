@@ -52,6 +52,22 @@ func PostAlbums(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
+func PutAlbum(c *gin.Context) {
+	var updatedAlbum entities.Album
+
+	if err := c.BindJSON(&updatedAlbum); err != nil {
+		return
+	}
+
+	for index, a := range albums {
+		if a.ID == updatedAlbum.ID {
+			albums[index] = updatedAlbum
+			c.IndentedJSON(http.StatusOK, updatedAlbum)
+			break
+		}
+	}
+}
+
 func DeleteAlbum(c *gin.Context) {
 	var id uuid.UUID = uuid.MustParse(c.Param("id"))
 

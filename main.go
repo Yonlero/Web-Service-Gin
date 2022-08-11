@@ -14,6 +14,7 @@ func main() {
 	router.GET("/albums", services.GetAlbums)
 	router.GET("/albums/:id", services.GetAlbumById)
 	router.POST("/albums", services.PostAlbums)
+	router.PUT("/albums", services.PutAlbum)
 	router.DELETE("albums/:id", services.DeleteAlbum)
 
 	//Run the API
