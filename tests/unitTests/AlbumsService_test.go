@@ -118,3 +118,24 @@ func TestPutAlbums(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code, "Correctly status code '200' - OK")
 	assert.NotNil(t, w.Body.String(), "Correctly body response - OK")
 }
+
+func TestDeleteAlbum(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.Default()
+	r.DELETE("/albums/:id", services.DeleteAlbum)
+
+	// Define the method of request, URL and the body of request
+	req, err := http.NewRequest(http.MethodDelete, "/albums/b69ff5c3-253b-4fd2-9568-293300552dee", nil)
+	if err != nil {
+		t.Fatalf("Couldn't create request: %v\n", err)
+	}
+
+	// Create a response recorder so you can inspect the response
+	w := httptest.NewRecorder()
+
+	// Perform the request
+	r.ServeHTTP(w, req)
+
+	// Check to see if the response was what you expected
+	assert.Equal(t, http.StatusOK, w.Code, "Correctly status code '200' - OK")
+}
