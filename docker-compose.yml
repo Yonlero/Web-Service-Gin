@@ -1,0 +1,30 @@
+version: '3.1'
+services:
+  PostgreSQL:
+    image: postgres:latest
+    container_name: Db_Postgres
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_PASSWORD: "YOUR PASSWORD HERE"
+    networks:
+      - postgres
+  
+  PgAdmin:
+    container_name: PgAdmin_Container
+    image: dpage/pgadmin4
+    depends_on:
+      - PostgreSQL
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "YOUR EMAIL HERE"
+      PGADMIN_DEFAULT_PASSWORD: "YOUR PASSWORD HERE"
+    ports:
+      - "6543:80"
+    networks:
+      - postgres
+    restart: unless-stopped
+
+networks:
+  postgres:
+    driver: bridge
