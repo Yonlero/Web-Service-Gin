@@ -43,11 +43,11 @@ And i'm tryng to bring java concepts to GoLang like the way to organize code and
         curl http://localhost:8080/albums \ 
         --include --header "Content-Type: application/json" \ 
         --request "POST" \
-        --data '{
-            "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-            "title": "",
-            "artist": "",
-            "price": 00.00
+        --data '{ \
+            "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", \
+            "title": "", \
+            "artist": "", \
+            "price": 00.00 \
             }'
     ```
 - Example PUT request body
@@ -55,10 +55,10 @@ And i'm tryng to bring java concepts to GoLang like the way to organize code and
         curl http://localhost:8080/albums \ 
         --include --header "Content-Type: application/json" \ 
         --request "PUT" \
-        --data '{
-            "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-            "title": "",
-            "artist": "",
-            "price": 00.00
+        --data '{ \
+            "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", \
+            "title": "", \
+            "artist": "", \
+            "price": 00.00 \ 
             }'
     ```
