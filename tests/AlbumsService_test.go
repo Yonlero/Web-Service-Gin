@@ -1,11 +1,11 @@
-package unittests_test
+package tests
 
 import (
 	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"web/service/gin/entities"
+	"web/service/gin/model/entities"
 	"web/service/gin/services"
 
 	"github.com/gin-gonic/gin"

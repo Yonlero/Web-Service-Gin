@@ -3,7 +3,7 @@ package services
 import (
 	"log"
 	"net/http"
-	"web/service/gin/entities"
+	"web/service/gin/model/entities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

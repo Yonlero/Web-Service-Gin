@@ -7,7 +7,9 @@ services:
     ports:
       - '5432:5432'
     environment:
-      POSTGRES_PASSWORD: "YOUR PASSWORD HERE"
+      POSTGRES_PASSWORD: < YOUR PASSWORD >
+      POSTGRES_USER: < YOUR USERNAME (root is default) >
+      POSTGRES_DB: "Db_Gin"
     networks:
       - postgres
   
@@ -17,8 +19,8 @@ services:
     depends_on:
       - PostgreSQL
     environment:
-      PGADMIN_DEFAULT_EMAIL: "YOUR EMAIL HERE"
-      PGADMIN_DEFAULT_PASSWORD: "YOUR PASSWORD HERE"
+      PGADMIN_DEFAULT_EMAIL: < YOUR EMAIL >
+      PGADMIN_DEFAULT_PASSWORD: < POSTGRES PASSWORD >
     ports:
       - "6543:80"
     networks:
