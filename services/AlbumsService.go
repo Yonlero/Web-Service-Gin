@@ -1,25 +1,39 @@
 package services
 
 import (
+	"fmt"
 	"log"
 	"net/http"
+	"web/service/gin/model/database"
 	"web/service/gin/model/entities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// -----------------------------Variables-------------------------
-// I'm not using uuid.New() because I'd like use the same ID in the tests
-var albums = []entities.Album{
-	{ID: uuid.MustParse("b69ff5c3-253b-4fd2-9568-293300552dee"), Title: "Blue Train", Artist: "John Coltrane", Price: 56.99},
-	{ID: uuid.MustParse("fb04cb76-8095-48c7-9536-1bb72a332689"), Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
-	{ID: uuid.MustParse("0a01e3d9-f977-4458-8d57-1c0af687a58f"), Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
-}
-
 // -----------------------------Functions-------------------------
 func GetAlbums(c *gin.Context) {
+	// Initialize DB Config (just testing connection)
+	db := database.OpenConnection()
+	rows, err := db.Query("SELECT * FROM tb_albums")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var albums []entities.Album
+
+	for rows.Next() {
+		var alb entities.Album
+
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+			panic(err)
+		} else {
+			albums = append(albums, alb)
+		}
+	}
+
 	c.IndentedJSON(http.StatusOK, albums)
+	database.CloseConnection(db)
 }
 
 func GetAlbumById(c *gin.Context) {
@@ -28,9 +42,23 @@ func GetAlbumById(c *gin.Context) {
 		log.Print(id.String())
 		panic(err)
 	}
-	for _, a := range albums {
-		if a.ID == id {
-			c.IndentedJSON(http.StatusOK, a)
+
+	// Initialize DB Config (just testing connection)
+	db := database.OpenConnection()
+	rows, err := db.Query("SELECT * FROM tb_albums")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	for rows.Next() {
+		var alb entities.Album
+
+		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+			panic(err)
+		}
+
+		if alb.ID == id {
+			c.IndentedJSON(http.StatusOK, alb)
 			break
 		}
 	}
@@ -43,48 +71,60 @@ func GetAlbumById(c *gin.Context) {
 
 func PostAlbums(c *gin.Context) {
 	var newAlbum entities.Album
-
+	// Initialize DB Config (just testing connection)
+	db := database.OpenConnection()
 	if err := c.BindJSON(&newAlbum); err != nil {
 		return
 	}
 
-	albums = append(albums, newAlbum)
+	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ('" + newAlbum.Title + "','" + newAlbum.Artist + "'," + fmt.Sprintf("%f", newAlbum.Price) + ");")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
+
 	c.IndentedJSON(http.StatusCreated, newAlbum)
 }
 
 func PutAlbum(c *gin.Context) {
 	var updatedAlbum entities.Album
-
+	db := database.OpenConnection()
 	if err := c.BindJSON(&updatedAlbum); err != nil {
 		return
 	}
 
-	for index, a := range albums {
-		if a.ID == updatedAlbum.ID {
-			albums[index] = updatedAlbum
-			c.IndentedJSON(http.StatusOK, updatedAlbum)
-			break
-		}
+	rows, err := db.Exec("UPDATE tb_albums SET title = '" + updatedAlbum.Title + "', artist = '" + updatedAlbum.Artist + "', price = " + fmt.Sprintf("%f", updatedAlbum.Price) + "  WHERE id='" + updatedAlbum.ID.String() + "';")
+	if err != nil {
+		panic(err.Error())
 	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
+	c.IndentedJSON(http.StatusOK, updatedAlbum)
 }
 
 func DeleteAlbum(c *gin.Context) {
 	var id uuid.UUID = uuid.MustParse(c.Param("id"))
 
-	for index, a := range albums {
-		if a.ID == id {
-			albums = removeIndex(albums, index)
-		}
+	// Initialize DB Config (just testing connection)
+	db := database.OpenConnection()
+	rows, err := db.Exec("DELETE FROM tb_albums WHERE id='" + id.String() + "';")
+	if err != nil {
+		panic(err.Error())
 	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
+	c.IndentedJSON(http.StatusNoContent, nil)
 
 	if c.Errors != nil {
 		c.Errors.JSON()
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
 	}
-	c.IndentedJSON(http.StatusOK, albums)
 
-}
-
-func removeIndex(s []entities.Album, index int) []entities.Album {
-	return append(s[:index], s[index+1:]...)
 }

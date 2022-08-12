@@ -137,5 +137,5 @@ func TestDeleteAlbum(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	// Check to see if the response was what you expected
-	assert.Equal(t, http.StatusOK, w.Code, "Correctly status code '200' - OK")
+	assert.Equal(t, http.StatusNoContent, w.Code, "Correctly status code '200' - OK")
 }

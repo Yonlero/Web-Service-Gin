@@ -3,13 +3,14 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	_ "github.com/lib/pq"
 )
 
 const (
 	POSTGRESDRIVER = "postgres"
-	USER           = "postgres"
+	USER           = "root"
 	HOST           = "localhost"
 	PORT           = "5432"
 	PASSWORD       = "123"
@@ -32,16 +33,18 @@ func CheckErr(err error) {
 	}
 }
 
-func OpenConnection() {
+func OpenConnection() *sql.DB {
 	Db, err = sql.Open(POSTGRESDRIVER, datasourceName)
 	if err != nil {
 		panic(err.Error())
 	} else {
-		fmt.Printf("\n\nConnected!\n\n")
+		log.Println("Connected!")
 	}
+
+	return Db
 }
 
 func CloseConnection(db *sql.DB) {
 	db.Close()
-	fmt.Printf("\n\nDatabase closed\n\n")
+	log.Println("Disconnected!")
 }
