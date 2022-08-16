@@ -39,7 +39,7 @@ func GetAlbums(c *gin.Context) {
 func GetAlbumById(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Print(id.String())
+		log.Fatalln("ID PROBLEM: " + id.String())
 		panic(err)
 	}
 
@@ -77,6 +77,8 @@ func PostAlbums(c *gin.Context) {
 		return
 	}
 
+	newAlbum.CheckFields()
+
 	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ('" + newAlbum.Title + "','" + newAlbum.Artist + "'," + fmt.Sprintf("%f", newAlbum.Price) + ");")
 	if err != nil {
 		panic(err.Error())
@@ -95,6 +97,8 @@ func PutAlbum(c *gin.Context) {
 	if err := c.BindJSON(&updatedAlbum); err != nil {
 		return
 	}
+
+	updatedAlbum.CheckFields()
 
 	rows, err := db.Exec("UPDATE tb_albums SET title = '" + updatedAlbum.Title + "', artist = '" + updatedAlbum.Artist + "', price = " + fmt.Sprintf("%f", updatedAlbum.Price) + "  WHERE id='" + updatedAlbum.ID.String() + "';")
 	if err != nil {
