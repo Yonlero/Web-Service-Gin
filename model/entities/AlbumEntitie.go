@@ -34,12 +34,12 @@ func (a Album) checkPrice() bool {
 	return reflect.TypeOf(a.Price) != nil && a.Price > 0
 }
 
-func (a Album) CheckFields() {
+func (a Album) CheckFields() bool {
 	if a.checkArtist() && a.checkPrice() && a.checkTitle() {
 		log.Println(a.printLogs())
-	} else {
-		log.Fatalln(a.printLogs())
+		return true
 	}
+	return false
 }
 
 func (a Album) printLogs() string {

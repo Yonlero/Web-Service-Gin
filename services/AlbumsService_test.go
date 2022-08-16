@@ -1,4 +1,4 @@
-package tests
+package services_test
 
 import (
 	"bytes"
@@ -42,7 +42,7 @@ func TestGetAlbumById(t *testing.T) {
 	r.GET("/albums/:id", services.GetAlbumById)
 
 	// Define the method of request, URL and the body of request
-	req, err := http.NewRequest(http.MethodGet, "/albums/b69ff5c3-253b-4fd2-9568-293300552dee", nil)
+	req, err := http.NewRequest(http.MethodGet, "/albums/e9a1a5b3-119a-4dcc-b21c-5f0b6a6d63e4", nil)
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}

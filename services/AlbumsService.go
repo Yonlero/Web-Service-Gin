@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
+	e "web/service/gin/errors"
 	"web/service/gin/model/database"
 	"web/service/gin/model/entities"
 
@@ -15,10 +17,7 @@ import (
 func GetAlbums(c *gin.Context) {
 	// Initialize DB Config (just testing connection)
 	db := database.OpenConnection()
-	rows, err := db.Query("SELECT * FROM tb_albums")
-	if err != nil {
-		panic(err.Error())
-	}
+	rows, _ := db.Query("SELECT * FROM tb_albums")
 
 	var albums []entities.Album
 
@@ -37,36 +36,22 @@ func GetAlbums(c *gin.Context) {
 }
 
 func GetAlbumById(c *gin.Context) {
-	id, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		log.Fatalln("ID PROBLEM: " + id.String())
-		panic(err)
-	}
-
+	id, _ := uuid.Parse(c.Param("id"))
+	var alb entities.Album
 	// Initialize DB Config (just testing connection)
 	db := database.OpenConnection()
-	rows, err := db.Query("SELECT * FROM tb_albums")
-	if err != nil {
-		panic(err.Error())
+	rows := db.QueryRow("SELECT * FROM tb_albums WHERE id='" + id.String() + "';")
+
+	if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
+		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
+			Status:  http.StatusNotFound,
+			Message: "Album Not Found",
+			Errors:  err}
+		c.IndentedJSON(http.StatusNotFound, errorResponse)
+	} else {
+		c.IndentedJSON(http.StatusOK, alb)
 	}
 
-	for rows.Next() {
-		var alb entities.Album
-
-		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-			panic(err)
-		}
-
-		if alb.ID == id {
-			c.IndentedJSON(http.StatusOK, alb)
-			break
-		}
-	}
-
-	if c.Errors != nil {
-		c.Errors.JSON()
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-	}
 }
 
 func PostAlbums(c *gin.Context) {
@@ -77,9 +62,18 @@ func PostAlbums(c *gin.Context) {
 		return
 	}
 
-	newAlbum.CheckFields()
+	if !newAlbum.CheckFields() {
+		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
+			Status:  http.StatusBadRequest,
+			Message: "Please fill the body correctly",
+			Errors:  http.ErrBodyNotAllowed}
+		c.IndentedJSON(http.StatusBadRequest, errorResponse)
+		return
+	}
 
-	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ('" + newAlbum.Title + "','" + newAlbum.Artist + "'," + fmt.Sprintf("%f", newAlbum.Price) + ");")
+	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ('" + newAlbum.Title + "','" +
+		newAlbum.Artist + "'," +
+		fmt.Sprintf("%f", newAlbum.Price) + ");")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -98,9 +92,19 @@ func PutAlbum(c *gin.Context) {
 		return
 	}
 
-	updatedAlbum.CheckFields()
+	if !updatedAlbum.CheckFields() {
+		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
+			Status:  http.StatusBadRequest,
+			Message: "Please fill the body correctly",
+			Errors:  http.ErrBodyNotAllowed}
+		c.IndentedJSON(http.StatusBadRequest, errorResponse)
+		return
+	}
 
-	rows, err := db.Exec("UPDATE tb_albums SET title = '" + updatedAlbum.Title + "', artist = '" + updatedAlbum.Artist + "', price = " + fmt.Sprintf("%f", updatedAlbum.Price) + "  WHERE id='" + updatedAlbum.ID.String() + "';")
+	rows, err := db.Exec("UPDATE tb_albums SET title = '" + updatedAlbum.Title +
+		"', artist = '" + updatedAlbum.Artist +
+		"', price = " + fmt.Sprintf("%f", updatedAlbum.Price) +
+		"  WHERE id='" + updatedAlbum.ID.String() + "';")
 	if err != nil {
 		panic(err.Error())
 	}
