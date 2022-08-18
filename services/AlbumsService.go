@@ -1,93 +1,67 @@
 package services
 
 import (
-	"fmt"
-	"log"
 	"net/http"
 	"time"
 	e "web/service/gin/errors"
-	"web/service/gin/model/database"
 	"web/service/gin/model/entities"
+	r "web/service/gin/model/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-// -----------------------------Functions-------------------------
-func GetAlbums(c *gin.Context) {
-	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
-	rows, _ := db.Query("SELECT * FROM tb_albums")
-
-	var albums []entities.Album
-
-	for rows.Next() {
-		var alb entities.Album
-
-		if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-			panic(err)
-		} else {
-			albums = append(albums, alb)
-		}
+type (
+	AlbumService  struct{ r.AlbumRepositoryI }
+	AlbumServiceI interface {
+		GetAlbums(c *gin.Context)
+		GetAlbumById(c *gin.Context)
+		PostAlbums(c *gin.Context)
+		PutAlbum(c *gin.Context)
+		DeleteAlbum(c *gin.Context)
 	}
+)
 
+var repository r.Repository
+
+/*
+	---------------------------Functions------------------------
+*/
+// GetAlbums Return all albums in DB
+func (s AlbumService) GetAlbums(c *gin.Context) {
+	var albums []entities.Album = repository.GetAllAlbums()
 	c.IndentedJSON(http.StatusOK, albums)
-	database.CloseConnection(db)
 }
 
-func GetAlbumById(c *gin.Context) {
+func (s AlbumService) GetAlbumById(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
-	var alb entities.Album
-	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
-	rows := db.QueryRow("SELECT * FROM tb_albums WHERE id='" + id.String() + "';")
-
-	if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
-			Status:  http.StatusNotFound,
-			Message: "Album Not Found",
-			Errors:  err}
-		c.IndentedJSON(http.StatusNotFound, errorResponse)
-	} else {
-		c.IndentedJSON(http.StatusOK, alb)
-	}
-
-}
-
-func PostAlbums(c *gin.Context) {
-	var newAlbum entities.Album
-	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
-	if err := c.BindJSON(&newAlbum); err != nil {
+	response, err := repository.GetAlbumById(id.String())
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
 		return
 	}
+	c.IndentedJSON(http.StatusOK, response)
+}
 
-	if !newAlbum.CheckFields() {
+func (s AlbumService) PostAlbums(c *gin.Context) {
+	var newAlbum entities.Album
+	if err := c.BindJSON(&newAlbum); err != nil {
 		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
 			Status:  http.StatusBadRequest,
-			Message: "Please fill the body correctly",
+			Message: "Cannot read your body request",
 			Errors:  http.ErrBodyNotAllowed}
 		c.IndentedJSON(http.StatusBadRequest, errorResponse)
+	}
+	response, err := repository.CreateNewAlbum(newAlbum)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, err)
 		return
 	}
-
-	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ('" + newAlbum.Title + "','" +
-		newAlbum.Artist + "'," +
-		fmt.Sprintf("%f", newAlbum.Price) + ");")
-	if err != nil {
-		panic(err.Error())
-	}
-
-	rowsAffected, _ := rows.RowsAffected()
-
-	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
-
-	c.IndentedJSON(http.StatusCreated, newAlbum)
+	c.IndentedJSON(http.StatusCreated, response)
 }
 
-func PutAlbum(c *gin.Context) {
+func (s AlbumService) PutAlbum(c *gin.Context) {
 	var updatedAlbum entities.Album
-	db := database.OpenConnection()
 	if err := c.BindJSON(&updatedAlbum); err != nil {
 		return
 	}
@@ -100,39 +74,16 @@ func PutAlbum(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, errorResponse)
 		return
 	}
-
-	rows, err := db.Exec("UPDATE tb_albums SET title = '" + updatedAlbum.Title +
-		"', artist = '" + updatedAlbum.Artist +
-		"', price = " + fmt.Sprintf("%f", updatedAlbum.Price) +
-		"  WHERE id='" + updatedAlbum.ID.String() + "';")
+	response, err := repository.UpdateAlbum(updatedAlbum)
 	if err != nil {
-		panic(err.Error())
+		c.IndentedJSON(http.StatusBadRequest, err)
+		return
 	}
-
-	rowsAffected, _ := rows.RowsAffected()
-
-	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
-	c.IndentedJSON(http.StatusOK, updatedAlbum)
+	c.IndentedJSON(http.StatusOK, response)
 }
 
-func DeleteAlbum(c *gin.Context) {
+func (s AlbumService) DeleteAlbum(c *gin.Context) {
 	var id uuid.UUID = uuid.MustParse(c.Param("id"))
-
-	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
-	rows, err := db.Exec("DELETE FROM tb_albums WHERE id='" + id.String() + "';")
-	if err != nil {
-		panic(err.Error())
-	}
-
-	rowsAffected, _ := rows.RowsAffected()
-
-	log.Println("Rows affected: " + fmt.Sprintf("%d", rowsAffected))
+	repository.DeleteAlbum(id.String())
 	c.IndentedJSON(http.StatusNoContent, nil)
-
-	if c.Errors != nil {
-		c.Errors.JSON()
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "album not found"})
-	}
-
 }

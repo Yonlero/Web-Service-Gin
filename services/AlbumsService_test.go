@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"web/service/gin/model/entities"
-	"web/service/gin/services"
+	s "web/service/gin/services"
 
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-json"
@@ -14,9 +14,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var services s.AlbumService
+
 func TestGetAlbums(t *testing.T) {
+
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
+
+	//	mockCtrl := gomock.NewController(t)
+	//	mockClient := mocks.NewMockClient(mockCtrl)
+
+	//	mockClient.EXPECT().GetAlbum(r * gin.Context)
 	r.GET("/albums", services.GetAlbums)
 
 	// Check to see if the response was what you expected
