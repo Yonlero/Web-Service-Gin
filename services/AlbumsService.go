@@ -22,20 +22,18 @@ type (
 	}
 )
 
-var repository r.Repository
-
 /*
 	---------------------------Functions------------------------
 */
 // GetAlbums Return all albums in DB
 func (s AlbumService) GetAlbums(c *gin.Context) {
-	var albums []entities.Album = repository.GetAllAlbums()
+	var albums []entities.Album = s.AlbumRepositoryI.GetAllAlbums()
 	c.IndentedJSON(http.StatusOK, albums)
 }
 
 func (s AlbumService) GetAlbumById(c *gin.Context) {
 	id, _ := uuid.Parse(c.Param("id"))
-	response, err := repository.GetAlbumById(id.String())
+	response, err := s.AlbumRepositoryI.GetAlbumById(id.String())
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, err)
 		return
@@ -46,13 +44,9 @@ func (s AlbumService) GetAlbumById(c *gin.Context) {
 func (s AlbumService) PostAlbums(c *gin.Context) {
 	var newAlbum entities.Album
 	if err := c.BindJSON(&newAlbum); err != nil {
-		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
-			Status:  http.StatusBadRequest,
-			Message: "Cannot read your body request",
-			Errors:  http.ErrBodyNotAllowed}
-		c.IndentedJSON(http.StatusBadRequest, errorResponse)
+		c.IndentedJSON(http.StatusBadRequest, createErrorBody(http.StatusBadRequest, "Please fill the body correctly", http.ErrBodyNotAllowed))
 	}
-	response, err := repository.CreateNewAlbum(newAlbum)
+	response, err := s.AlbumRepositoryI.CreateNewAlbum(newAlbum)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, err)
 		return
@@ -67,14 +61,10 @@ func (s AlbumService) PutAlbum(c *gin.Context) {
 	}
 
 	if !updatedAlbum.CheckFields() {
-		errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
-			Status:  http.StatusBadRequest,
-			Message: "Please fill the body correctly",
-			Errors:  http.ErrBodyNotAllowed}
-		c.IndentedJSON(http.StatusBadRequest, errorResponse)
+		c.IndentedJSON(http.StatusBadRequest, createErrorBody(http.StatusBadRequest, "Please fill the body correctly", http.ErrBodyNotAllowed))
 		return
 	}
-	response, err := repository.UpdateAlbum(updatedAlbum)
+	response, err := s.AlbumRepositoryI.UpdateAlbum(updatedAlbum)
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, err)
 		return
@@ -84,6 +74,14 @@ func (s AlbumService) PutAlbum(c *gin.Context) {
 
 func (s AlbumService) DeleteAlbum(c *gin.Context) {
 	var id uuid.UUID = uuid.MustParse(c.Param("id"))
-	repository.DeleteAlbum(id.String())
+	s.AlbumRepositoryI.DeleteAlbum(id.String())
 	c.IndentedJSON(http.StatusNoContent, nil)
+}
+
+func createErrorBody(status int, msg string, err error) e.ErrorBodyResponse {
+	errorResponse := e.ErrorBodyResponse{Timestamp: time.Now(),
+		Status:  status,
+		Message: msg,
+		Errors:  err}
+	return errorResponse
 }
