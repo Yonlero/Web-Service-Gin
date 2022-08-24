@@ -2,11 +2,12 @@ package services_test
 
 import (
 	"bytes"
+	"github.com/golang/mock/gomock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"web/service/gin/model/entities"
-	s "web/service/gin/services"
+	mocks "web/service/gin/services/mocks"
 
 	"github.com/gin-gonic/gin"
 	"github.com/goccy/go-json"
@@ -14,17 +15,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var services s.AlbumService
+var services mocks.MockIAlbumService
+
+var expectedResult []entities.Album = []entities.Album{{
+	ID:     uuid.MustParse("3fc7046e-666b-46a5-8028-b54f122118cf"),
+	Title:  "Test_1",
+	Artist: "TestA_1",
+	Price:  10.0,
+}, {
+	ID:     uuid.MustParse("a362220d-0fdb-497c-8792-3aa0991f00fd"),
+	Title:  "Test_2",
+	Artist: "TestA_2",
+	Price:  20.0,
+}}
 
 func TestGetAlbums(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
+	// Create a response recorder so you can inspect the response
+	w := httptest.NewRecorder()
 	r := gin.Default()
+	c, _ := gin.CreateTestContext(w)
 
-	//	mockCtrl := gomock.NewController(t)
-	//	mockClient := mocks.NewMockClient(mockCtrl)
+	c.IndentedJSON(200, expectedResult)
 
-	//	mockClient.EXPECT().GetAlbum(r * gin.Context)
+	mockCtrl := gomock.NewController(t)
+	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+
+	mockClient.EXPECT().GetAlbums(&c)
 	r.GET("/albums", services.GetAlbums)
 
 	// Check to see if the response was what you expected
@@ -32,10 +50,6 @@ func TestGetAlbums(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-
-	// Create a response recorder so you can inspect the response
-	w := httptest.NewRecorder()
-
 	// Perform the request
 	r.ServeHTTP(w, req)
 

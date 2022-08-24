@@ -1,31 +1,27 @@
 package repository
 
 import (
-	"net/http"
-	"time"
 	er "web/service/gin/errors"
-	"web/service/gin/model/database"
+	data "web/service/gin/model/database"
 	e "web/service/gin/model/entities"
 )
 
 type (
-	Repository struct {
-	}
-	AlbumRepositoryI interface {
+	AlbumRepository  struct{ data.IDatabase }
+	IAlbumRepository interface {
 		GetAllAlbums() []e.Album
-		GetAlbumById(id string) (*e.Album, *er.ErrorBodyResponse)
-		CreateNewAlbum(newAlbum e.Album) (*int64, *er.ErrorBodyResponse)
-		UpdateAlbum(updatedAlbum e.Album) (*int64, *er.ErrorBodyResponse)
+		GetAlbumById(id string) any
+		CreateNewAlbum(newAlbum e.Album) any
+		UpdateAlbum(updatedAlbum e.Album) any
 		DeleteAlbum(id string)
 	}
 )
 
-func (Repository) GetAllAlbums() []e.Album {
-	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
-	rows, _ := db.Query("SELECT * FROM tb_albums")
-
+func (r AlbumRepository) GetAllAlbums() []e.Album {
 	var albums []e.Album
+	// Initialize DB Config (just testing connection)
+	db := r.IDatabase.OpenConnection()
+	rows, _ := db.Query("SELECT * FROM tb_albums")
 
 	for rows.Next() {
 		var alb e.Album
@@ -37,65 +33,63 @@ func (Repository) GetAllAlbums() []e.Album {
 		}
 	}
 
-	database.CloseConnection(db)
+	err := db.Close()
+	if err != nil {
+		return nil
+	}
 	return albums
 }
 
-func (Repository) GetAlbumById(id string) (*e.Album, *er.ErrorBodyResponse) {
+func (r AlbumRepository) GetAlbumById(id string) any {
 	var alb e.Album
 
 	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
+	db := r.IDatabase.OpenConnection()
 	rows := db.QueryRow("SELECT * FROM tb_albums WHERE id=$1", id)
 
 	if err := rows.Scan(&alb.ID, &alb.Title, &alb.Artist, &alb.Price); err != nil {
-		database.CloseConnection(db)
-		return nil, createErrorBody(http.StatusBadRequest, "Album Not Found", http.ErrBodyNotAllowed)
+		r.IDatabase.CloseConnection(db)
+		return er.ErrorBodyResponse{}
 	} else {
-		database.CloseConnection(db)
-		return &alb, nil
+		r.IDatabase.CloseConnection(db)
+		return alb
 	}
 }
 
-func (r Repository) CreateNewAlbum(newAlbum e.Album) (*int64, *er.ErrorBodyResponse) {
+func (r AlbumRepository) CreateNewAlbum(newAlbum e.Album) any {
 	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
+	db := r.IDatabase.OpenConnection()
+
 	if !newAlbum.CheckFields() {
-		return nil, createErrorBody(http.StatusBadRequest, "Please fill the body correctly", http.ErrBodyNotAllowed)
+		return &er.ErrorBodyResponse{}
 	}
 
-	rows, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ($1, $2, $3)", newAlbum.Title, newAlbum.Artist, newAlbum.Price)
+	_, err := db.Exec("INSERT INTO tb_albums (title, artist, price) VALUES ($1, $2, $3) RETURNING id", newAlbum.Title, newAlbum.Artist, newAlbum.Price)
 	if err != nil {
-		panic(err.Error())
+		r.IDatabase.CloseConnection(db)
+		return er.ErrorBodyResponse{}
 	}
 
-	rowsAffected, _ := rows.RowsAffected()
-	return &rowsAffected, nil
+	r.IDatabase.CloseConnection(db)
+	return newAlbum
 }
 
-func (r Repository) UpdateAlbum(updatedAlbum e.Album) (*int64, *er.ErrorBodyResponse) {
-	db := database.OpenConnection()
-	rows, err := db.Exec("UPDATE tb_albums SET title = $1, artist = $2, price = $3 WHERE id= $4", updatedAlbum.Title, updatedAlbum.Artist, updatedAlbum.Price, updatedAlbum.ID)
+func (r AlbumRepository) UpdateAlbum(updatedAlbum e.Album) any {
+	db := r.IDatabase.OpenConnection()
+	_, err := db.Exec("UPDATE tb_albums SET title = $1, artist = $2, price = $3 WHERE id= $4", updatedAlbum.Title, updatedAlbum.Artist, updatedAlbum.Price, updatedAlbum.ID)
 	if err != nil {
-		return nil, createErrorBody(http.StatusBadRequest, "Please fill the body correctly", http.ErrBodyNotAllowed)
+		return er.ErrorBodyResponse{}
 	}
-	rowsAffected, _ := rows.RowsAffected()
-	return &rowsAffected, nil
+	r.IDatabase.CloseConnection(db)
+	return updatedAlbum
 }
 
-func (r Repository) DeleteAlbum(id string) {
+func (r AlbumRepository) DeleteAlbum(id string) {
 	// Initialize DB Config (just testing connection)
-	db := database.OpenConnection()
+	db := r.IDatabase.OpenConnection()
 	_, err := db.Exec("DELETE FROM tb_albums WHERE id=$1;", id)
+	r.IDatabase.CloseConnection(db)
 	if err != nil {
 		return
 	}
-}
-
-func createErrorBody(status int, msg string, err error) *er.ErrorBodyResponse {
-	errorResponse := er.ErrorBodyResponse{Timestamp: time.Now(),
-		Status:  status,
-		Message: msg,
-		Errors:  err}
-	return &errorResponse
 }

@@ -17,7 +17,15 @@ const (
 	DBNAME         = "Db_Gin"
 )
 
-var Db *sql.DB
+type (
+	Database  struct{}
+	IDatabase interface {
+		OpenConnection() *sql.DB
+		CloseConnection(db *sql.DB)
+	}
+)
+
+var db *sql.DB
 var err error
 var datasourceName = fmt.Sprintf("host=%s "+
 	"port=%s "+
@@ -27,24 +35,26 @@ var datasourceName = fmt.Sprintf("host=%s "+
 	"sslmode=disable",
 	HOST, PORT, USER, PASSWORD, DBNAME)
 
-func CheckErr(err error) {
+func checkErr(err error) {
 	if err != nil {
 		panic(err.Error())
 	}
 }
 
-func OpenConnection() *sql.DB {
-	Db, err = sql.Open(POSTGRESDRIVER, datasourceName)
+func (d Database) OpenConnection() *sql.DB {
+	db, err = sql.Open(POSTGRESDRIVER, datasourceName)
 	if err != nil {
 		panic(err.Error())
 	} else {
 		log.Println("Connected!")
 	}
-
-	return Db
+	return db
 }
 
-func CloseConnection(db *sql.DB) {
-	db.Close()
+func (d Database) CloseConnection(db *sql.DB) {
+	err := db.Close()
+	if err != nil {
+		return
+	}
 	log.Println("Disconnected!")
 }
