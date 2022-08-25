@@ -23,7 +23,7 @@ var expectedResult []entities.Album = []entities.Album{{
 	Artist: "TestA_1",
 	Price:  10.0,
 }, {
-	ID:     uuid.MustParse("a362220d-0fdb-497c-8792-3aa0991f00fd"),
+	ID:     uuid.MustParse("00000000-0000-0000-0000-000000000000"),
 	Title:  "Test_2",
 	Artist: "TestA_2",
 	Price:  20.0,
@@ -41,9 +41,11 @@ func TestGetAlbums(t *testing.T) {
 
 	mockCtrl := gomock.NewController(t)
 	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+	mockClient.EXPECT().GetAlbums().Return(expectedResult)
 
-	mockClient.EXPECT().GetAlbums(&c)
-	r.GET("/albums", services.GetAlbums)
+	r.GET("/albums", func(context *gin.Context) {
+		context.IndentedJSON(http.StatusOK, mockClient.GetAlbums())
+	})
 
 	// Check to see if the response was what you expected
 	req, err := http.NewRequest(http.MethodGet, "/albums", nil)
@@ -61,16 +63,24 @@ func TestGetAlbums(t *testing.T) {
 func TestGetAlbumById(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.GET("/albums/:id", services.GetAlbumById)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.IndentedJSON(200, expectedResult[1])
+
+	mockCtrl := gomock.NewController(t)
+	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+	mockClient.EXPECT().GetAlbumById("00000000-0000-0000-0000-000000000000").Return(200, expectedResult[1])
+
+	r.GET("/albums/:id", func(context *gin.Context) {
+		status, body := mockClient.GetAlbumById("00000000-0000-0000-0000-000000000000")
+		context.IndentedJSON(status, body)
+	})
 
 	// Define the method of request, URL and the body of request
-	req, err := http.NewRequest(http.MethodGet, "/albums/e9a1a5b3-119a-4dcc-b21c-5f0b6a6d63e4", nil)
+	req, err := http.NewRequest(http.MethodGet, "/albums/00000000-0000-0000-0000-000000000000", nil)
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-
-	// Create a response recorder so you can inspect the response
-	w := httptest.NewRecorder()
 
 	// Perform the request
 	r.ServeHTTP(w, req)
@@ -83,24 +93,30 @@ func TestGetAlbumById(t *testing.T) {
 func TestPostAlbums(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.POST("/albums", services.PostAlbums)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.IndentedJSON(201, expectedResult[1])
 
-	newAlbum := entities.Album{
-		ID:     uuid.New(),
-		Title:  "Test Title",
-		Artist: "Test Artist",
-		Price:  56.99,
-	}
-	jsonValue, _ := json.Marshal(newAlbum)
+	mockCtrl := gomock.NewController(t)
+	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+	mockClient.EXPECT().PostAlbums(expectedResult[1]).Return(201, expectedResult[1])
+
+	r.POST("/albums", func(ctx *gin.Context) {
+		var newAlbum entities.Album
+		if err := ctx.BindJSON(&newAlbum); err != nil {
+			ctx.IndentedJSON(http.StatusBadRequest, newAlbum)
+		}
+		status, body := mockClient.PostAlbums(newAlbum)
+		ctx.IndentedJSON(status, body)
+	})
+
+	jsonValue, _ := json.Marshal(expectedResult[1])
 
 	// Check to see if the response was what you expected
 	req, err := http.NewRequest(http.MethodPost, "/albums", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-
-	// Create a response recorder so you can inspect the response
-	w := httptest.NewRecorder()
 
 	// Perform the request
 	r.ServeHTTP(w, req)
@@ -113,25 +129,30 @@ func TestPostAlbums(t *testing.T) {
 func TestPutAlbums(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.PUT("/albums", services.PutAlbum)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.IndentedJSON(200, expectedResult[1])
 
-	updatedAlbum := entities.Album{
-		ID:     uuid.MustParse("b69ff5c3-253b-4fd2-9568-293300552dee"),
-		Title:  "Test Title Updated",
-		Artist: "Test Artist Updated",
-		Price:  56.99,
-	}
+	mockCtrl := gomock.NewController(t)
+	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+	mockClient.EXPECT().PutAlbum(expectedResult[1]).Return(200, expectedResult[1])
 
-	jsonValue, _ := json.Marshal(updatedAlbum)
+	r.PUT("/albums", func(context *gin.Context) {
+		var updatedAlbum entities.Album
+		if err := context.BindJSON(&updatedAlbum); err != nil {
+			context.IndentedJSON(http.StatusBadRequest, expectedResult[1])
+		}
+		status, body := mockClient.PutAlbum(updatedAlbum)
+		context.IndentedJSON(status, body)
+	})
+
+	jsonValue, _ := json.Marshal(expectedResult[1])
 
 	// Check to see if the response was what you expected
 	req, err := http.NewRequest(http.MethodPut, "/albums", bytes.NewBuffer(jsonValue))
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-
-	// Create a response recorder so you can inspect the response
-	w := httptest.NewRecorder()
 
 	// Perform the request
 	r.ServeHTTP(w, req)
@@ -144,16 +165,24 @@ func TestPutAlbums(t *testing.T) {
 func TestDeleteAlbum(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
-	r.DELETE("/albums/:id", services.DeleteAlbum)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.IndentedJSON(204, expectedResult[1])
+
+	mockCtrl := gomock.NewController(t)
+	mockClient := mocks.NewMockIAlbumService(mockCtrl)
+	mockClient.EXPECT().DeleteAlbum("00000000-0000-0000-0000-000000000000").Return()
+
+	r.DELETE("/albums/:id", func(context *gin.Context) {
+		mockClient.DeleteAlbum("00000000-0000-0000-0000-000000000000")
+		context.IndentedJSON(200, http.NoBody)
+	})
 
 	// Define the method of request, URL and the body of request
-	req, err := http.NewRequest(http.MethodDelete, "/albums/b69ff5c3-253b-4fd2-9568-293300552dee", nil)
+	req, err := http.NewRequest(http.MethodDelete, "/albums/00000000-0000-0000-0000-000000000000", nil)
 	if err != nil {
 		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-
-	// Create a response recorder so you can inspect the response
-	w := httptest.NewRecorder()
 
 	// Perform the request
 	r.ServeHTTP(w, req)
